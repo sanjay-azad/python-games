@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Chess</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+    <center>
+        <h4>Chess Board</h4>
+        <hr>
+        <div id="chessboard">{{chess_board}}</div>
+        <input type="text" id="txtInput" placeholder="Enter Move">
+        <input type="button" id="btnSubmit" value="Press to Submit">
+        <input type="button" id="btnUndo" value="Undo">
+
+        <!-- <div id="moves" style="text-align:right; margin-top:5px"></div> -->
+    </center>
+
+    <div id="msg" style="text-align:center; margin-top:5px"></div>
+    <div id="gameResult" style="text-align:center; margin-top:10px; font-size: large;"></div>
+
+</body>
+
+
+<script>
+    $("#txtInput").keyup(function(event) {
+        if (event.keyCode === 13) {
+            submit_move()
+        }
+    });
+
+    $("#btnSubmit").click(function(){
+        submit_move()
+    })
+
+    function submit_move(){
+        $("#msg").html('')
+        var txt = $("#txtInput").val();
+
+        $.ajax({
+            url : 'http://127.0.0.1:5000/user_move',
+            type : 'POST',
+            data : {
+                'move' : txt
+            },
+            dataType:'html',
+            success : function(data) {
+                var parsedJson = $.parseJSON(data);
+                var svg = parsedJson.board
+                var checkmate = parsedJson.checkmate
+
+                $("#chessboard").html(svg);
+                $("#txtInput").val('');
+                $("#txtInput").attr('disabled', 'disabled');
+                // $("#moves").append("<span>"+ txt + "</span>");
+                if (checkmate){
+                    $("#gameResult").html("<font color=green>You Won!!!</font>")
+                }
+
+                $.ajax({
+                    url : 'http://127.0.0.1:5000/engine_move',
+                    type : 'POST',
+                    dataType:'html',
+                    success : function(data) {
+                        var parsedJson = $.parseJSON(data);
+                        var svg = parsedJson.board;
+                        var checkmate = parsedJson.checkmate
+
+                        $("#chessboard").html(svg);
+                        $("#txtInput").removeAttr('disabled');
+                        $("#txtInput").focus();
+                        $("#btnUndo").removeAttr('disabled');
+                        // $("#moves").append("<span>"+ "" + "</span>");
+                        if (checkmate){
+                            $("#gameResult").html("<font color=red>You Lost!!!</font>")
+                        }
+                    },
+                    error : function(request,error)
+                    {
+                        // alert("Request: "+JSON.stringify(request));
+                        $("#msg").html("<font color='red'>"+ error +"</font>");
+                    }
+                });
+            },
+            error : function(request,error)
+            {
+                // alert("Request: "+JSON.stringify(request));
+                $("#msg").html("<font color='red'>The move is Invalid</font>")
+            }
+        });
+    }
+
+    $("#btnUndo").click(function(){
+        $.ajax({
+            url : 'http://127.0.0.1:5000/undo',
+            type : 'POST',
+            dataType:'html',
+            success : function(data) {
+                $("#chessboard").html(data)
+                $("#btnUndo").attr('disabled', 'disabled')
+                $("#txtInput").focus()
+            },
+            error : function(request,error)
+            {
+                // alert("Request: "+JSON.stringify(request));
+                $("#msg").html("<font color='red'>"+ JSON.stringify(request) +"</font>")
+            }
+        });
+    })
+
+</script>
+</html>
